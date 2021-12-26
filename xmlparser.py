@@ -39,7 +39,7 @@ class Node():
             tag_end = tag_end1 + 1 if tag_end2 == -1 else tag_end2 + 2
         else:
             self.is_contain = False if tag_end1 < tag_end2 else True
-            self.is_contain = tag_end1 + 1 if tag_end1 < tag_end2 else tag_end2 + 2
+            tag_end = tag_end1 + 1 if tag_end1 < tag_end2 else tag_end2 + 2
         # save the position
         self.open_tag_scope = (tag_start, tag_end)
         # get open tag data
@@ -61,6 +61,9 @@ class Node():
         return True
     
     def parse_close_tag(self, stream, end):
+        if self.is_contain:
+            self.close_tag_scope = (self.open_tag_scope[1], self.open_tag_scope[1])
+            return True
         tag_start = stream.find("</{0}>".format(self.name), self.open_tag_scope[1], end)
         if tag_start == -1:
             return None
@@ -68,6 +71,9 @@ class Node():
         return True
     
     def parse_data(self, stream):
+        if self.is_contain:
+            self.data_scope = (self.open_tag_scope[1], self.open_tag_scope[1])
+            return (self.open_tag_scope[1], self.open_tag_scope[1])
         self.data_scope = (self.open_tag_scope[1],self.close_tag_scope[0])
         return (self.open_tag_scope[1],self.close_tag_scope[0])
 
@@ -94,10 +100,9 @@ if __name__ == "__main__":
             # 2. find open tag, close tag, data
             if current.parse_open_tag(stream, parse_start, parse_end) is None:
                 raise Exception("open tag not found or parse open tag error")
-            if current.is_contain == False:
-                if current.parse_close_tag(stream, parse_end) is None:
-                    raise Exception("close tag not found")
-                current.parse_data(stream)
+            if current.parse_close_tag(stream, parse_end) is None:
+                raise Exception("close tag not found")
+            current.parse_data(stream)
             #print(current)
             # 3. find child node
             if stream.find("<", current.data_scope[0], current.data_scope[1]) != -1:
@@ -157,7 +162,7 @@ if __name__ == "__main__":
                 continue
     except Exception as e:
         print("parse except : {0}".format(e))
-    
+
     # tree traverse
     current = root
     result = dict()
@@ -253,5 +258,5 @@ if __name__ == "__main__":
                 stack.pop()
         if not brother_flag:
             break
-
+    
     print(result)
