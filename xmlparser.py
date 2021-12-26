@@ -1,4 +1,4 @@
-import pprint
+#import pprint
 
 class Node():
     def __init__(self):
@@ -266,8 +266,8 @@ def parse(file_path):
         print("convert except : {0}".format(e))
         return None
     
-    pp = pprint.PrettyPrinter(indent=1)
-    pp.pprint(result)
+#    pp = pprint.PrettyPrinter(indent=1)
+#    pp.pprint(result)
     return result
 
-parse("D:\\lab\\xml_parser\\data\\test2.xml")
+#parse("D:\\lab\\xml_parser\\data\\test2.xml")
