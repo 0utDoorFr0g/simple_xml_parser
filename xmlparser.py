@@ -1,3 +1,5 @@
+import pprint
+
 class Node():
     def __init__(self):
         self.name = None # node name
@@ -77,14 +79,20 @@ class Node():
         self.data_scope = (self.open_tag_scope[1],self.close_tag_scope[0])
         return (self.open_tag_scope[1],self.close_tag_scope[0])
 
-if __name__ == "__main__":
+def parse(file_path):
     
     stream = None
     root = Node()
     current = root
-    file_path = "D:\\lab\\xml_parser\\data\\test2.xml"
-    with open(file_path, 'r', encoding='UTF8') as f:
-        stream = f.read()
+    #file_path = "D:\\lab\\xml_parser\\data\\test2.xml"
+    try:
+        with open(file_path, 'r', encoding='UTF8') as f:
+            stream = f.read()
+            if stream is None:
+                raise Exception("file read except")
+    except Exception as e:
+        return None
+
 
     # parse XML tree
     try:
@@ -162,101 +170,104 @@ if __name__ == "__main__":
                 continue
     except Exception as e:
         print("parse except : {0}".format(e))
+        return None
 
-    # tree traverse
-    current = root
-    result = dict()
-    stack = [result]
-    while True:
-        # mark node
-        current.is_traversed = True
-        # 겹치는 이름이 존재하는 경우
-        if current.name in stack[-1].keys():
-            # 데이터를 리스트로 변환한 경우
-            if type(stack[-1][current.name]) == list:
-                # 데이터만 있는 경우라면
-                if not current.data is None:
-                    stack[-1][current.name].append(current.data)
-                # 속성, 속성값만 있는 경우라면
-                elif not current.attribute is None:
-                    temp = dict()
-                    for k, v in current.attribute.items():
-                        temp[k] = v
-                    stack[-1][current.name].append(temp)
-                    stack.append(temp)
-                # 데이터도 속성도 없는 경우
+    # tree to dictionary
+    try:
+        current = root
+        result = dict()
+        stack = [result]
+        while True:
+            # mark node
+            current.is_traversed = True
+            # dictionary already has key
+            if current.name in stack[-1].keys():
+                # value type is already list
+                if type(stack[-1][current.name]) == list:
+                    # case 1, tag has only data
+                    if not current.data is None and current.is_contain == False:
+                        stack[-1][current.name].append(current.data)
+                    # case 2, tag has only attributes
+                    elif not current.attribute is None:
+                        temp = dict()
+                        for k, v in current.attribute.items():
+                            temp[k] = v
+                        stack[-1][current.name].append(temp)
+                        stack.append(temp)
+                    # case 3, no data in tag
+                    else:
+                        stack[-1][current.name].append(dict())
+                        stack.append(temp)
+                # value type is not list(dict)
                 else:
-                    stack[-1][current.name].append(dict())
-                    stack.append(temp)
-            # 데이터가 아직 리스트로 변환되지 않은 경우
+                    # save dictionary in list
+                    temp = [stack[-1][current.name]]
+                    # change dictionary to list
+                    stack[-1][current.name] = temp
+                    # case 1, tag has only data
+                    if not current.data is None and current.is_contain == False:
+                        stack[-1][current.name].append(current.data)
+                    # case 2, tag has only attributes
+                    elif not current.attribute is None:
+                        node_data = dict()
+                        for k, v in current.attribute.items():
+                            node_data[k] = v
+                        stack[-1][current.name].append(node_data)
+                        stack.append(node_data)
+                    # case 3, no data in tag
+                    else:
+                        node_data = dict()
+                        stack[-1][current.name].append(node_data)
+                        stack.append(node_data)
+            # dictionary has not key
             else:
-                # 리스트에 기존 딕셔너리를 담고
-                temp = [stack[-1][current.name]]
-                # 딕셔너리에서 리스트로 변경
-                stack[-1][current.name] = temp
-                # 데이터만 있다면
-                if not current.data is None:
-                    stack[-1][current.name].append(current.data)
-                # 속성, 속성값이 존재한다면
+                # case 1, tag has only data
+                if not current.data is None and current.is_contain == False:
+                    stack[-1][current.name] = current.data
+                # case 2, tag has only attributes
                 elif not current.attribute is None:
-                    node_data = dict()
+                    stack[-1][current.name] = dict()
                     for k, v in current.attribute.items():
-                        node_data[k] = v
-                    stack[-1][current.name].append(node_data)
-                    stack.append(node_data)
+                        stack[-1][current.name][k] = v
+                    stack.append(stack[-1][current.name])
+                # case 3, no data in tag
                 else:
-                    node_data = dict()
-                    stack[-1][current.name].append(node_data)
-                    stack.append(node_data)
-            # 데이터를 리스트로 변환하지 않은 경우
-        # 겹치는 이름이 존재하지 않을 경우
-        else:
-            # 데이터가 있는 경우라면
-            if not current.data is None:
-                # top에다가 데이터가 있는 노드를 갱신
-                stack[-1][current.name] = current.data
-            # 속성, 속성값만 있을 때
-            elif not current.attribute is None:
-                # 대응하는 사전 생성
-                stack[-1][current.name] = dict()
-                # 사전에 속성, 속성값 데이터 추가
-                for k, v in current.attribute.items():
-                    stack[-1][current.name][k] = v
-                # 스택의 top에다가 사전 추가
-                stack.append(stack[-1][current.name])
-            # 데이터도 속성도 없는 경우
-            else:
-                # 대응하는 사전 생성
-                stack[-1][current.name] = dict()
-                # 스택에 top에다가 사전 추가
-                stack.append(stack[-1][current.name])
-        # print node summary
-        #print(current.summary())
-        # check child
-        if not current.child is None: 
-            child_flag = False
-            for children in current.child:
-                if not children.is_traversed:
-                    current = children
-                    child_flag = True
-                    break
-            if child_flag:
-                continue
-        # check brother
-        brother_flag = False
-        while not current.parent is None:
-            if not current.parent.child is None:
-                for brother in current.parent.child:
-                    if not brother.is_traversed:              
-                        current = brother
-                        brother_flag = True
+                    stack[-1][current.name] = dict()
+                    stack.append(stack[-1][current.name])
+            # print node summary
+            #print(current.summary())
+            # check child
+            if not current.child is None: 
+                child_flag = False
+                for children in current.child:
+                    if not children.is_traversed:
+                        current = children
+                        child_flag = True
                         break
-            if brother_flag:
+                if child_flag:
+                    continue
+            # check brother
+            brother_flag = False
+            while not current.parent is None:
+                if not current.parent.child is None:
+                    for brother in current.parent.child:
+                        if not brother.is_traversed:              
+                            current = brother
+                            brother_flag = True
+                            break
+                if brother_flag:
+                    break
+                else:
+                    current = current.parent
+                    stack.pop()
+            if not brother_flag:
                 break
-            else:
-                current = current.parent
-                stack.pop()
-        if not brother_flag:
-            break
+    except Exception as e:
+        print("convert except : {0}".format(e))
+        return None
     
-    print(result)
+    pp = pprint.PrettyPrinter(indent=1)
+    pp.pprint(result)
+    return result
+
+parse("D:\\lab\\xml_parser\\data\\test2.xml")
